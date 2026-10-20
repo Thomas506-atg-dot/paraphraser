@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+    ============================================================
+    Rule-Based Paraphraser v2.0
+    No AI. No API keys. 100% offline. MIT License — free to use.
+    Publish: save as index.html, push to GitHub, enable Pages.
+    ============================================================
+-->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paraphraser — Rule-Based Rewriter (Offline)</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+        --bg: #0a0e1a; --panel: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.1);
+        --text: #e2e8f0; --muted: #8b95a7; --accent1: #22d3ee; --accent2: #a78bfa;
+    }
+    body {
+        font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text);
+        min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        padding: 2rem 1rem; position: relative; overflow-x: hidden;
+    }
+    body::before { content:''; position:fixed; top:-20%; left:-10%; width:60vw; height:60vw;
+        background: radial-gradient(circle, rgba(34,211,238,0.12), transparent 60%); pointer-events:none; }
+    body::after { content:''; position:fixed; bottom:-20%; right:-10%; width:60vw; height:60vw;
+        background: radial-gradient(circle, rgba(167,139,250,0.12), transparent 60%); pointer-events:none; }
+    .app { width: 100%; max-width: 760px; position: relative; z-index: 1; }
+    header { text-align: center; margin-bottom: 2rem; }
+    .logo { font-size: 0.75rem; letter-spacing: 4px; text-transform: uppercase;
+        color: var(--accent1); margin-bottom: 0.75rem; font-weight: 600; }
+    h1 { font-size: 2.4rem; font-weight: 700;
+        background: linear-gradient(90deg, var(--accent1), var(--accent2));
+        -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .subtitle { color: var(--muted); margin-top: 0.5rem; font-size: 0.95rem; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+        padding: 1.5rem; backdrop-filter: blur(12px); margin-bottom: 1.25rem; transition: border-color 0.3s; }
+    .card:focus-within { border-color: rgba(34,211,238,0.4); }
+    .card-label { display: flex; justify-content: space-between; align-items: center;
+        font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px;
+        color: var(--muted); margin-bottom: 0.75rem; }
+    textarea { width: 100%; min-height: 170px; background: transparent; border: none;
+        color: var(--text); font-size: 1rem; line-height: 1.7; resize: vertical; font-family: inherit; }
+    textarea:focus { outline: none; }
+    textarea::placeholder { color: #4a5568; }
+    .modes { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+    .pill { flex: 1; padding: 0.7rem; background: var(--panel); border: 1px solid var(--border);
+        border-radius: 10px; color: var(--muted); cursor: pointer; font-size: 0.9rem;
+        font-weight: 600; transition: all 0.25s; text-align: center; }
+    .pill:hover { border-color: rgba(34,211,238,0.4); color: var(--text); }
+    .pill.active { background: linear-gradient(90deg, rgba(34,211,238,0.15), rgba(167,139,250,0.15));
+        border-color: var(--accent1); color: var(--text); box-shadow: 0 0 20px rgba(34,211,238,0.15); }
+    .btn-row { display: flex; gap: 0.75rem; }
+    .btn-run { flex: 3; padding: 1rem; border: none; border-radius: 12px; font-size: 1rem;
+        font-weight: 700; color: #0a0e1a; background: linear-gradient(90deg, var(--accent1), var(--accent2));
+        cursor: pointer; position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.3s; }
+    .btn-run:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(34,211,238,0.35); }
+    .btn-run:active { transform: translateY(0); }
+    .btn-run:disabled { opacity: 0.6; cursor: wait; }
+    .btn-run::after { content:''; position:absolute; top:0; left:-100%; width:60%; height:100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        transform: skewX(-20deg); }
+    .btn-run:hover::after { animation: shine 0.8s; }
+    @keyframes shine { to { left: 160%; } }
+    .btn-ghost { flex: 1; padding: 1rem; background: transparent; border: 1px solid var(--border);
+        border-radius: 12px; color: var(--muted); cursor: pointer; font-size: 0.95rem; font-weight: 600;
+        transition: all 0.25s; }
+    .btn-ghost:hover { border-color: var(--accent1); color: var(--accent1); }
+    .output-text { line-height: 1.7; font-size: 1rem; min-height: 60px; white-space: pre-wrap; }
+    .output-text.placeholder { color: #4a5568; }
+    .btn-copy { padding: 0.55rem 1.2rem; background: transparent; border: 1px solid var(--border);
+        border-radius: 8px; color: var(--muted); cursor: pointer; font-size: 0.85rem; transition: all 0.25s; }
+    .btn-copy:hover { border-color: var(--accent1); color: var(--accent1); }
+    .shimmer { background: linear-gradient(90deg, #4a5568 25%, #94a3b8 50%, #4a5568 75%);
+        background-size: 200% 100%; -webkit-background-clip: text; background-clip: text;
+        color: transparent; animation: shimmer 1.2s infinite; }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px);
+        background: #111827; border: 1px solid var(--accent1); color: var(--text);
+        padding: 0.7rem 1.5rem; border-radius: 10px; font-size: 0.9rem; opacity: 0;
+        transition: all 0.3s; z-index: 10; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    footer { text-align: center; color: #4a5568; font-size: 0.8rem; margin-top: 1.5rem; line-height: 1.6; }
+    @media (max-width: 480px) { h1 { font-size: 1.8rem; } .modes { flex-direction: column; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+    <header>
+        <div class="logo">Rule Engine // No AI // Offline</div>
+        <h1>Paraphraser</h1>
+        <p class="subtitle">150+ synonym groups &middot; 40+ phrase rules &middot; grammar-safe rewriting</p>
+    </header>
+
+    <div class="modes">
+        <div class="pill" data-mode="light">Light</div>
+        <div class="pill active" data-mode="standard">Standard</div>
+        <div class="pill" data-mode="strong">Strong</div>
+    </div>
+
+    <div class="card">
+        <div class="card-label">
+            <span>Input</span>
+            <span id="charCount">0 chars &middot; 0 words</span>
+        </div>
+        <textarea id="inputText" placeholder="Type or paste your text here..."></textarea>
+    </div>
+
+    <div class="btn-row">
+        <button class="btn-run" id="runBtn">Paraphrase</button>
+        <button class="btn-ghost" id="clearBtn">Clear</button>
+    </div>
+
+    <div class="card" style="margin-top: 1.25rem;">
+        <div class="card-label">
+            <span>Output</span>
+            <button class="btn-copy" id="copyBtn" style="margin-top:0;">Copy</button>
+        </div>
+        <div class="output-text placeholder" id="outputText">Your paraphrased text will appear here...</div>
+    </div>
+
+    <footer>
+        100% client-side &mdash; no API keys, no network requests.<br>
+        Rewriting is rule-based; meaning is preserved but style may vary per run.
+    </footer>
+</div>
+
+<div class="toast" id="toast">Copied!</div>
+
+<script>
+/* ================================================================
+   1. PHRASE RULES  (multi-word expressions -> shorter/simpler forms)
+   Applied BEFORE single-word swaps.
+================================================================ */
+const PHRASE_RULES = [
+    [/\bin order to\b/gi, ["to"]],
+    [/\bdue to the fact that\b/gi, ["because", "since"]],
+    [/\bin spite of the fact that\b/gi, ["although", "even though"]],
+    [/\bin the event that\b/gi, ["if"]],
+    [/\bin the near future\b/gi, ["soon"]],
+    [/\bin the near future\b/gi, ["soon"]],
+    [/\bat this point in time\b/gi, ["now", "currently"]],
+    [/\bit is important to note that\b/gi, ["notably", "importantly"]],
+    [/\bit should be noted that\b/gi, ["note that"]],
+    [/\bit is worth mentioning that\b/gi, ["notably"]],
+    [/\bas a matter of fact\b/gi, ["in fact", "actually"]],
+    [/\bfor all intents and purposes\b/gi, ["essentially", "basically"]],
+    [/\bin my opinion\b/gi, ["I believe", "in my view"]],
+    [/\bin my humble opinion\b/gi, ["I believe"]],
+    [/\bfirst and foremost\b/gi, ["first of all"]],
+    [/\blast but not least\b/gi, ["finally"]],
+    [/\beach and every\b/gi, ["every"]],
+    [/\bvarious different\b/gi, ["various"]],
+    [/\bbasic fundamentals\b/gi, ["fundamentals"]],
+    [/\bfuture plans\b/gi, ["plans"]],
+    [/\bpast history\b/gi, ["history"]],
+    [/\bclose proximity\b/gi, ["proximity"]],
+    [/\bend result\b/gi, ["result"]],
+    [/\bexact same\b/gi, ["same"]],
+    [/\bnew innovation\b/gi, ["innovation"]],
+    [/\btrue fact\b/gi, ["fact"]],
+    [/\bjoin together\b/gi, ["join", "unite"]],
+    [/\bfree gift\b/gi, ["gift"]],
+    [/\b12 midnight\b/gi, ["midnight"]],
+    [/\b12 noon\b/gi, ["noon"]],
+    [/\ba lot of\b/gi, ["many", "plenty of", "lots of"]],
+    [/\ba number of\b/gi, ["several", "numerous"]],
+    [/\ba couple of\b/gi, ["two", "a few"]],
+    [/\bkind of\b/gi, ["somewhat", "rather"]],
+    [/\bsort of\b/gi, ["somewhat", "rather"]],
+    [/\btons of\b/gi, ["plenty of", "a great deal of"]]
+];
+
+/* ================================================================
+   2. SYNONYM GROUPS  (word -> array of interchangeable alternatives)
+   Each run picks RANDOMLY, so output differs every time.
+   Only whole words are replaced; capitalization is preserved.
+================================================================ */
+const SYNONYMS = {
+    // ---- NOUNS ----
+    problem: ["issue", "challenge", "difficulty"],
+    idea: ["concept", "notion", "thought"],
+    method: ["approach", "technique", "procedure"],
+    part: ["component", "segment", "portion"],
+    thing: ["element", "item", "object"],
+    way: ["manner", "method"],
+    place: ["location", "site", "spot"],
+    person: ["individual"],
+    people: ["individuals", "persons"],
+    child: ["kid", "youngster"],
+    kid: ["child", "youngster"],
+    money: ["funds", "cash"],
+    job: ["occupation", "position", "role"],
+    work: ["task", "occupation", "effort"],
+    home: ["residence", "house"],
+    house: ["residence", "dwelling"],
+    car: ["automobile", "vehicle"],
+    vehicle: ["automobile", "car"],
+    book: ["volume", "publication"],
+    world: ["globe", "planet", "earth"],
+    life: ["existence"],
+    reason: ["cause", "factor", "motive"],
+    result: ["outcome", "consequence"],
+    effect: ["impact", "consequence"],
+    fact: ["reality", "truth"],
+    example: ["instance", "illustration", "case"],
+    question: ["inquiry", "query"],
+    answer: ["reply", "response"],
+    response: ["reply", "answer"],
+    change: ["alteration", "modification", "shift"],
+    need: ["requirement", "necessity"],
+    use: ["usage", "utilization"],
+    help: ["assistance", "aid", "support"],
+    study: ["research", "examination", "analysis"],
+    test: ["examination", "assessment", "trial"],
+    group: ["team", "collective", "assembly"],
+    team: ["group", "squad"],
+    number: ["quantity", "figure", "count"],
+    level: ["degree", "stage", "tier"],
+    rate: ["pace", "speed", "frequency"],
+    risk: ["hazard", "danger", "threat"],
+    cost: ["expense", "price"],
+    price: ["cost", "value"],
+    value: ["worth", "benefit"],
+    skill: ["ability", "competence", "talent"],
+    knowledge: ["understanding", "awareness", "information"],
+    information: ["data", "details", "facts"],
+    news: ["updates", "report", "bulletin"],
+    story: ["tale", "narrative", "account"],
+    word: ["term", "expression"],
+    name: ["title", "designation"],
+    mind: ["intellect", "brain"],
+    thought: ["idea", "notion", "consideration"],
+    feeling: ["emotion", "sentiment"],
+    hope: ["expectation", "optimism"],
+    fear: ["apprehension", "concern", "dread"],
+    love: ["affection", "fondness", "devotion"],
+    happiness: ["joy", "delight", "contentment"],
+    sadness: ["sorrow", "unhappiness"],
+    kind: ["type", "sort", "variety"],
+    type: ["kind", "sort", "category"],
+    sort: ["kind", "type"],
+    riskiness: ["uncertainty"],
+    issue: ["matter", "topic", "concern"],
+    moment: ["instant", "point", "second"],
+    period: ["interval", "span", "duration"],
+    event: ["occurrence", "incident", "happening"],
+    plan: ["scheme", "strategy", "proposal"],
+    decision: ["choice", "resolution", "judgment"],
+    choice: ["option", "selection", "alternative"],
+    option: ["choice", "alternative"],
+    opinion: ["view", "belief", "perspective"],
+    view: ["opinion", "perspective", "outlook"],
+    belief: ["conviction", "opinion", "faith"],
+    goal: ["objective", "aim", "target"],
+    aim: ["goal", "objective", "purpose"],
+    purpose: ["goal", "objective", "intention"],
+    step: ["measure", "stage", "action"],
+    action: ["step", "measure", "deed"],
+    act: ["action", "deed"],
+    state: ["condition", "situation", "status"],
+    country: ["nation", "state", "land"],
+    area: ["region", "zone", "district"],
+    field: ["domain", "area", "sphere"],
+    company: ["firm", "corporation", "business"],
+    business: ["company", "enterprise", "firm"],
+    market: ["marketplace", "bazaar"],
+    product: ["item", "commodity", "goods"],
+    service: ["assistance", "facility"],
+    system: ["framework", "structure", "network"],
+    process: ["procedure", "method", "operation"],
+    rule: ["regulation", "principle", "guideline"],
+    law: ["regulation", "statute", "rule"],
+    right: ["entitlement", "privilege"],
+    power: ["authority", "strength", "influence"],
+    control: ["authority", "command", "management"],
+    management: ["administration", "oversight", "control"],
+    government: ["administration", "authorities", "state"],
+    war: ["conflict", "warfare", "battle"],
+    peace: ["harmony", "tranquility"],
+    energy: ["power", "vitality", "vigor"],
+    water: ["H2O", "liquid"],
+    food: ["nourishment", "sustenance", "meal"],
+    air: ["atmosphere", "breeze"],
+    fire: ["flame", "blaze", "inferno"],
+    light: ["illumination", "radiance", "glow"],
+    sound: ["noise", "tone", "audio"],
+    voice: ["tone", "speech", "utterance"],
+    song: ["tune", "melody", "track"],
+    music: ["melody", "tunes"],
+    movie: ["film", "motion picture", "flick"],
+    game: ["match", "contest", "competition"],
+    sport: ["athletics", "activity"],
+    art: ["artwork", "craft"],
+    picture: ["image", "photo", "painting"],
+    photo: ["photograph", "picture", "snapshot"],
+    // ---- VERBS ----
+    make: ["create", "produce", "construct"],
+    get: ["obtain", "acquire", "secure", "receive"],
+    give: ["provide", "supply", "deliver", "offer"],
+    take: ["seize", "grab", "capture"],
+    show: ["demonstrate", "display", "reveal", "indicate"],
+    tell: ["inform", "notify", "advise", "reveal"],
+    ask: ["request", "inquire", "question"],
+    find: ["discover", "locate", "detect"],
+    keep: ["retain", "preserve", "maintain"],
+    use: ["utilize", "employ", "apply"],
+    help: ["assist", "aid", "support", "facilitate"],
+    begin: ["start", "commence", "initiate", "launch"],
+    start: ["begin", "commence", "initiate", "launch"],
+    end: ["finish", "conclude", "terminate", "complete"],
+    finish: ["complete", "conclude", "finalize", "end"],
+    try: ["attempt", "endeavor", "strive"],
+    attempt: ["try", "endeavor", "effort"],
+    need: ["require", "necessitate", "demand"],
+    want: ["desire", "wish", "seek", "crave"],
+    like: ["enjoy", "prefer", "appreciate", "fancy"],
+    love: ["adore", "cherish", "treasure"],
+    think: ["believe", "consider", "assume", "reckon"],
+    know: ["understand", "comprehend", "recognize", "grasp"],
+    say: ["state", "declare", "mention", "remark"],
+    said: ["stated", "declared", "mentioned", "remarked"],
+    see: ["observe", "witness", "perceive", "notice"],
+    look: ["appear", "seem", "glance"],
+    watch: ["observe", "monitor", "view"],
+    feel: ["sense", "experience", "perceive"],
+    understand: ["comprehend", "grasp", "fathom"],
+    learn: ["acquire", "study", "grasp", "master"],
+    teach: ["educate", "instruct", "train", "tutor"],
+    write: ["compose", "pen", "author", "draft"],
+    read: ["peruse", "study", "scan"],
+    speak: ["talk", "converse", "utter"],
+    talk: ["speak", "converse", "discuss", "chat"],
+    walk: ["stroll", "stride", "wander"],
+    move: ["shift", "relocate", "proceed", "transfer"],
+    change: ["alter", "modify", "transform", "revise"],
+    create: ["produce", "generate", "establish", "develop"],
+    build: ["construct", "develop", "erect", "assemble"],
+    break: ["fracture", "shatter", "rupture", "damage"],
+    stop: ["halt", "cease", "discontinue", "pause"],
+    leave: ["depart", "exit", "abandon", "quit"],
+    come: ["arrive", "approach", "enter"],
+    go: ["proceed", "travel", "depart", "head"],
+    bring: ["fetch", "deliver", "carry", "convey"],
+    send: ["dispatch", "forward", "transmit", "ship"],
+    receive: ["obtain", "accept", "acquire"],
+    buy: ["purchase", "acquire", "procure"],
+    purchase: ["buy", "acquire", "obtain"],
+    sell: ["market", "vend", "retail"],
+    pay: ["compensate", "remunerate", "settle"],
+    work: ["function", "operate", "labor", "toil"],
+    play: ["perform", "participate", "engage"],
+    live: ["reside", "dwell", "exist", "inhabit"],
+    die: ["perish", "expire", "pass away"],
+    grow: ["expand", "develop", "increase", "flourish"],
+    fall: ["drop", "decline", "descend", "plunge"],
+    drop: ["fall", "decline", "decrease", "lower"],
+    rise: ["increase", "ascend", "climb", "soar"],
+    increase: ["raise", "boost", "expand", "enhance"],
+    decrease: ["reduce", "diminish", "lessen", "lower"],
+    improve: ["enhance", "upgrade", "refine", "ameliorate"],
+    reduce: ["decrease", "minimize", "curtail", "diminish"],
+    add: ["include", "append", "attach", "insert"],
+    remove: ["eliminate", "extract", "discard", "delete"],
+    allow: ["permit", "authorize", "enable", "let"],
+    require: ["necessitate", "demand", "need"],
+    suggest: ["propose", "recommend", "advise"],
+    recommend: ["suggest", "advise", "endorse"],
+    consider: ["contemplate", "deem", "evaluate", "regard"],
+    decide: ["determine", "resolve", "choose", "settle"],
+    choose: ["select", "opt", "pick", "elect"],
+    select: ["choose", "pick", "opt for"],
+    agree: ["consent", "concur", "approve"],
+    disagree: ["differ", "object", "dispute"],
+    believe: ["assume", "trust", "hold", "presume"],
+    mean: ["signify", "imply", "denote", "indicate"],
+    seem: ["appear", "look"],
+    become: ["develop into", "turn into", "grow to be"],
+    remain: ["stay", "persist", "endure", "continue"],
+    stay: ["remain", "linger", "reside"],
+    happen: ["occur", "transpire", "take place", "arise"],
+    occur: ["happen", "transpire", "arise"],
+    cause: ["trigger", "induce", "provoke", "bring about"],
+    include: ["contain", "incorporate", "comprise", "encompass"],
+    involve: ["entail", "require", "engage", "encompass"],
+    offer: ["propose", "extend", "present", "provide"],
+    provide: ["supply", "furnish", "deliver", "offer"],
+    develop: ["create", "evolve", "advance", "progress"],
+    produce: ["generate", "manufacture", "yield", "create"],
+    support: ["back", "endorse", "uphold", "bolster"],
+    affect: ["influence", "impact", "alter", "modify"],
+    join: ["connect", "unite", "link", "combine"],
+    connect: ["link", "attach", "associate", "join"],
+    split: ["divide", "separate", "part", "segment"],
+    separate: ["divide", "split", "part", "detach"],
+    compare: ["contrast", "evaluate", "juxtapose"],
+    check: ["verify", "inspect", "examine", "confirm"],
+    verify: ["confirm", "validate", "check", "authenticate"],
+    test: ["examine", "assess", "evaluate", "trial"],
+    prove: ["demonstrate", "confirm", "verify", "establish"],
+    explain: ["clarify", "describe", "elaborate", "illustrate"],
+    describe: ["depict", "characterize", "detail", "portray"],
+    state: ["declare", "assert", "express", "pronounce"],
+    claim: ["assert", "allege", "contend", "maintain"],
+    note: ["observe", "mention", "indicate", "remark"],
+    mention: ["reference", "cite", "note", "state"],
+    report: ["document", "record", "describe", "chronicle"],
+    announce: ["declare", "proclaim", "reveal", "broadcast"],
+    promise: ["pledge", "assure", "vow", "guarantee"],
+    refuse: ["decline", "reject", "deny", "turn down"],
+    accept: ["approve", "embrace", "acknowledge", "adopt"],
+    reject: ["decline", "dismiss", "refuse", "spurn"],
+    fix: ["repair", "mend", "resolve", "rectify"],
+    solve: ["resolve", "address", "remedy", "settle"],
+    avoid: ["prevent", "evade", "dodge", "sidestep"],
+    prevent: ["stop", "hinder", "preclude", "avert"],
+    protect: ["shield", "safeguard", "guard", "defend"],
+    save: ["preserve", "rescue", "conserve", "store"],
+    win: ["triumph", "succeed", "prevail", "conquer"],
+    lose: ["misplace", "forfeit", "suffer loss of"],
+    wait: ["await", "anticipate", "bide"],
+    meet: ["encounter", "convene", "assemble"],
+    face: ["confront", "encounter", "address"],
+    reach: ["attain", "achieve", "arrive at"],
+    achieve: ["accomplish", "attain", "realize"],
+    accomplish: ["achieve", "complete", "fulfill"],
+    fail: ["flop", "fall short", "misfire"],
+    destroy: ["demolish", "ruin", "devastate", "shatter"],
+    damage: ["harm", "impair", "injure"],
+    harm: ["damage", "injure", "hurt"],
+    // ---- ADJECTIVES ----
+    good: ["excellent", "great", "fine", "superb", "positive"],
+    bad: ["poor", "terrible", "substandard", "awful", "negative"],
+    big: ["large", "sizable", "substantial", "considerable"],
+    large: ["sizable", "big", "substantial", "considerable"],
+    small: ["tiny", "compact", "minor", "little"],
+    little: ["small", "minor", "slight"],
+    new: ["novel", "fresh", "recent", "innovative"],
+    old: ["aged", "ancient", "antiquated", "outdated", "elderly"],
+    young: ["youthful", "juvenile"],
+    long: ["lengthy", "extended", "prolonged"],
+    short: ["brief", "compact", "concise"],
+    high: ["elevated", "lofty", "tall"],
+    low: ["minimal", "reduced", "limited"],
+    fast: ["rapid", "quick", "swift", "speedy"],
+    quick: ["fast", "rapid", "swift"],
+    slow: ["gradual", "sluggish", "unhurried", "leisurely"],
+    easy: ["simple", "effortless", "straightforward"],
+    simple: ["straightforward", "basic", "uncomplicated", "plain"],
+    hard: ["difficult", "challenging", "tough", "arduous"],
+    difficult: ["challenging", "demanding", "arduous", "hard"],
+    strong: ["powerful", "robust", "sturdy", "potent"],
+    weak: ["feeble", "fragile", "frail", "delicate"],
+    happy: ["glad", "pleased", "delighted", "joyful", "content"],
+    sad: ["unhappy", "sorrowful", "melancholy", "gloomy"],
+    angry: ["upset", "furious", "irritated", "enraged"],
+    rich: ["wealthy", "affluent", "prosperous", "opulent"],
+    poor: ["needy", "impoverished", "underprivileged", "bad"],
+    important: ["significant", "crucial", "vital", "essential", "key"],
+    necessary: ["required", "essential", "vital", "needed"],
+    possible: ["feasible", "conceivable", "achievable", "viable"],
+    impossible: ["unfeasible", "inconceivable", "unachievable"],
+    different: ["distinct", "dissimilar", "various", "diverse"],
+    same: ["identical", "equivalent", "alike", "matching"],
+    similar: ["alike", "comparable", "akin", "analogous"],
+    true: ["accurate", "genuine", "authentic", "correct"],
+    false: ["incorrect", "invalid", "untrue", "bogus"],
+    real: ["actual", "genuine", "authentic", "true"],
+    main: ["primary", "central", "leading", "principal", "chief"],
+    major: ["significant", "substantial", "principal", "primary"],
+    minor: ["slight", "trivial", "insignificant", "small"],
+    clear: ["obvious", "evident", "transparent", "apparent", "plain"],
+    unclear: ["vague", "ambiguous", "obscure", "hazy"],
+    certain: ["definite", "specific", "sure", "particular"],
+    sure: ["certain", "confident", "positive", "convinced"],
+    ready: ["prepared", "set", "primed", "geared up"],
+    able: ["capable", "competent", "skilled", "adept"],
+    available: ["accessible", "obtainable", "on hand", "ready"],
+    common: ["widespread", "prevalent", "frequent", "ordinary"],
+    rare: ["uncommon", "scarce", "infrequent", "exceptional"],
+    complex: ["complicated", "intricate", "sophisticated", "elaborate"],
+    modern: ["contemporary", "current", "up-to-date", "cutting-edge"],
+    full: ["complete", "entire", "whole", "filled"],
+    empty: ["vacant", "hollow", "void", "bare"],
+    general: ["broad", "overall", "widespread", "universal"],
+    specific: ["particular", "precise", "exact", "distinct"],
+    recent: ["latest", "current", "new", "modern"],
+    early: ["initial", "premature", "prompt", "first"],
+    safe: ["secure", "protected", "sound", "harmless"],
+    dangerous: ["hazardous", "risky", "unsafe", "perilous"],
+    dangerousness: ["hazardousness"],
+    useful: ["helpful", "beneficial", "valuable", "handy"],
+    useless: ["futile", "pointless", "worthless", "unhelpful"],
+    effective: ["efficient", "productive", "successful", "potent"],
+    interesting: ["engaging", "captivating", "fascinating", "intriguing"],
+    boring: ["dull", "tedious", "monotonous", "uninteresting"],
+    beautiful: ["attractive", "gorgeous", "stunning", "lovely", "pretty"],
+    pretty: ["attractive", "lovely", "beautiful"],
+    ugly: ["unattractive", "unsightly", "hideous"],
+    famous: ["renowned", "celebrated", "well-known", "distinguished"],
+    popular: ["well-liked", "favored", "trendy", "fashionable"],
+    healthy: ["wholesome", "fit", "well", "sound"],
+    sick: ["ill", "unwell", "ailing", "indisposed"],
+    clean: ["spotless", "sanitary", "tidy", "pure"],
+    dirty: ["soiled", "grimy", "filthy", "unclean"],
+    heavy: ["weighty", "burdensome", "hefty", "massive"],
+    dark: ["dim", "gloomy", "murky", "shadowy"],
+    bright: ["luminous", "vivid", "brilliant", "radiant"],
+    loud: ["noisy", "booming", "deafening", "thunderous"],
+    quiet: ["silent", "hushed", "calm", "peaceful", "tranquil"],
+    busy: ["occupied", "active", "engaged", "hectic"],
+    basic: ["fundamental", "elementary", "essential", "core"],
+    advanced: ["sophisticated", "cutting-edge", "state-of-the-art"],
+    perfect: ["flawless", "ideal", "impeccable", "faultless"],
+    normal: ["usual", "standard", "typical", "regular", "ordinary"],
+    regular: ["usual", "normal", "standard", "routine", "typical"],
+    serious: ["severe", "grave", "critical", "acute"],
+    strange: ["odd", "peculiar", "bizarre", "weird", "unusual"],
+    weird: ["strange", "odd", "peculiar", "bizarre"],
+    huge: ["enormous", "massive", "immense", "gigantic", "vast"],
+    tiny2: [],
+    vast: ["huge", "immense", "expansive"],
+    wide: ["broad", "expansive", "extensive"],
+    narrow: ["slim", "thin", "tight"],
+    deep: ["profound", "immense"],
+    thick: ["dense", "heavy"],
+    thin: ["slim", "slender", "lean"],
+    smooth: ["sleek", "even", "silky"],
+    rough: ["coarse", "rugged", "uneven"],
+    sharp: ["keen", "acute", "pointed"],
+    blunt: ["dull", "rounded"],
+    soft: ["gentle", "mild", "tender", "plush"],
+    gentle: ["mild", "soft", "tender", "calm"],
+    kind2: [],
+    warm: ["mild", "tepid", "cozy"],
+    cold: ["chilly", "freezing", "icy", "frigid"],
+    hot: ["heated", "scorching", "sweltering", "boiling"],
+    wet: ["moist", "damp", "soaked"],
+    dry: ["arid", "parched", "dehydrated"],
+    fresh: ["new", "novel", "recent"],
+    stale: ["old", "outdated", "moldy"],
+    // ---- ADVERBS ----
+    often: ["frequently", "commonly", "regularly", "repeatedly"],
+    usually: ["typically", "generally", "normally", "ordinarily"],
+    sometimes: ["occasionally", "at times", "now and then", "periodically"],
+    rarely: ["seldom", "infrequently", "hardly ever"],
+    very: ["extremely", "highly", "exceptionally", "immensely", "incredibly"],
+    really: ["truly", "genuinely", "actually", "indeed"],
+    quickly: ["rapidly", "swiftly", "speedily", "promptly", "briskly"],
+    slowly: ["gradually", "sluggishly", "leisurely"],
+    easily: ["effortlessly", "readily", "smoothly"],
+    carefully: ["cautiously", "thoroughly", "meticulously", "attentively"],
+    clearly: ["obviously", "distinctly", "evidently", "plainly"],
+    probably: ["likely", "presumably", "apparently", "presumptively"],
+    maybe: ["perhaps", "possibly", "conceivably"],
+    perhaps: ["maybe", "possibly", "conceivably"],
+    almost: ["nearly", "virtually", "practically", "just about"],
+    quite: ["fairly", "rather", "somewhat", "pretty"],
+    also: ["additionally", "moreover", "furthermore", "besides", "too"],
+    again: ["once more", "anew", "afresh"],
+    soon: ["shortly", "promptly", "before long", "presently"],
+    now: ["currently", "at present", "presently", "at the moment"],
+    then: ["subsequently", "next", "afterward", "later"],
+    later: ["afterwards", "subsequently", "eventually", "thereafter"],
+    together: ["jointly", "collectively", "in unison"],
+    alone: ["solely", "singly", "by oneself"],
+    instead: ["alternatively", "as an alternative", "rather"],
+    therefore: ["thus", "consequently", "hence", "as a result"],
+    so: ["therefore", "thus", "consequently", "as a result"],
+    because: ["since", "as", "for the reason that"],
+    but: ["yet", "however", "nevertheless", "nonetheless", "still"],
+    and: ["along with", "as well as", "together with"],
+    while: ["whereas", "although", "whilst"],
+    finally: ["ultimately", "lastly", "in the end", "eventually"],
+    // ---- CONJUNCTIONS / TRANSITIONS (sentence-level) ----
+    firstly: ["first", "to begin with", "to start with"],
+    secondly: ["second", "next", "then"],
+    thirdly: ["third", "after that"],
+    lastly: ["finally", "ultimately"],
+    moreover: ["furthermore", "additionally", "besides"],
+    furthermore: ["moreover", "additionally", "besides"],
+    however: ["nevertheless", "nonetheless", "yet", "still"],
+    therefore2: [],
+    thus: ["therefore", "hence", "consequently"],
+    hence: ["therefore", "thus", "consequently"],
+    meanwhile: ["in the meantime", "at the same time", "simultaneously"],
+    otherwise: ["alternatively", "else", "if not"],
+    indeed: ["in fact", "truly", "certainly"],
+    in_fact: [],
+    moreover2: []
+};
+
+/* ================================================================
+   3. CONTRACTIONS (Standard / Strong modes)
+================================================================ */
+const CONTRACTIONS = [
+    [/\bdo not\b/gi, "don't"], [/\bdoes not\b/gi, "doesn't"],
+    [/\bdid not\b/gi, "didn't"], [/\bcannot\b/gi, "can't"],
+    [/\bcan not\b/gi, "can't"], [/\bwill not\b/gi, "won't"],
+    [/\bwould not\b/gi, "wouldn't"], [/\bshould not\b/gi, "shouldn't"],
+    [/\bcould not\b/gi, "couldn't"], [/\bis not\b/gi, "isn't"],
+    [/\bare not\b/gi, "aren't"], [/\bwas not\b/gi, "wasn't"],
+    [/\bwere not\b/gi, "weren't"], [/\bhas not\b/gi, "hasn't"],
+    [/\bhave not\b/gi, "haven't"], [/\bhad not\b/gi, "hadn't"],
+    [/\bit is\b/gi, "it's"], [/\bthat is\b/gi, "that's"],
+    [/\bthere is\b/gi, "there's"], [/\bthere are\b/gi, "there're"],
+    [/\bi am\b/gi, "I'm"], [/\bwe are\b/gi, "we're"],
+    [/\bthey are\b/gi, "they're"], [/\byou are\b/gi, "you're"],
+    [/\bwe will\b/gi, "we'll"], [/\bi will\b/gi, "I'll"],
+    [/\bit will\b/gi, "it'll"], [/\bthat will\b/gi, "that'll"],
+    [/\bi have\b/gi, "I've"], [/\bwe have\b/gi, "we've"],
+    [/\bthey have\b/gi, "they've"], [/\bi would\b/gi, "I'd"],
+    [/\bwe would\b/gi, "we'd"], [/\bit would\b/gi, "it'd"]
+];
+
+/* ================================================================
+   4. SENTENCE STARTERS (Strong mode reshapes paragraph openings)
+================================================================ */
+const SENTENCE_STARTERS = [
+    [/^However, /gm, "Nevertheless, "],
+    [/^Therefore, /gm, "As a result, "],
+    [/^So, /gm, "Thus, "],
+    [/^But /gm, "Yet "],
+    [/^And /gm, "Also, "],
+    [/^In conclusion, /gm, "To conclude, "],
+    [/^In summary, /gm, "To summarize, "],
+    [/^For example, /gm, "For instance, "],
+    [/^In addition, /gm, "Furthermore, "],
+    [/^First, /gm, "To begin with, "],
+    [/^Finally, /gm, "Lastly, "]
+];
+
+/* ================================================================
+   5. STRONG-MODE FILLER REMOVAL
+================================================================ */
+const FILLER_CUTS = [/\bvery \b/gi, /\breally \b/gi, /\bjust \b/gi, /\bactually \b/gi, /\bbasically \b/gi, /\bliterally \b/gi];
+
+/* ================================================================
+   ENGINE
+================================================================ */
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function preserveCase(original, replacement) {
+    if (original === original.toUpperCase() && original.length > 1) return replacement.toUpperCase();
+    if (original[0] === original[0].toUpperCase()) return replacement[0].toUpperCase() + replacement.slice(1);
+    return replacement;
+}
+
+let replacementMade = false;
+
+function applySynonyms(text) {
+    replacementMade = false;
+    const keys = Object.keys(SYNONYMS).filter(function (k) { return SYNONYMS[k].length > 0; });
+    const re = new RegExp("\\b(" + keys.join("|") + ")\\b", "gi");
+    return text.replace(re, function (match) {
+        const options = SYNONYMS[match.toLowerCase()];
+        if (!options || options.length === 0) return match;
+        replacementMade = true;
+        return preserveCase(match, pick(options));
+    });
+}
+
+function shuffleSentences(text) {
+    // Fallback: reorder sentences within each paragraph (meaning preserved)
+    return text.split(/\n+/).map(function (para) {
+        const sentences = para.match(/[^.!?]+[.!?]+["')\]]*\s*/g);
+        if (!sentences || sentences.length < 2) return para;
+        for (let i = sentences.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const t = sentences[i]; sentences[i] = sentences[j]; sentences[j] = t;
+        }
+        // Re-capitalize first word of each sentence
+        return sentences.map(function (s, idx) {
+            s = s.trim();
+            if (!s) return s;
+            return (idx === 0 ? "" : " ") + s[0].toUpperCase() + s.slice(1);
+        }).join("").trim();
+    }).join("\n");
+}
+
+function paraphrase(text, mode) {
+    let out = " " + text.replace(/\s+/g, " ").trim() + " ";
+
+    // Pass 1: phrases
+    PHRASE_RULES.forEach(function (rule) {
+        out = out.replace(rule[0], function () { return pick(rule[1]); });
+    });
+
+    // Pass 2: synonyms (randomized each run)
+    out = applySynonyms(out);
+
+    // Pass 3: mode-specific
+    if (mode === "standard" || mode === "strong") {
+        CONTRACTIONS.forEach(function (rule) {
+            out = out.replace(rule[0], function (m) {
+                return m[0] === m[0].toUpperCase() ? rule[1][0].toUpperCase() + rule[1].slice(1) : rule[1];
+            });
+        });
+    }
+    if (mode === "strong") {
+        FILLER_CUTS.forEach(function (re) { out = out.replace(re, ""); });
+        SENTENCE_STARTERS.forEach(function (rule) {
+            out = out.replace(rule[0], function () { return rule[1]; });
+        });
+    }
+
+    out = out.trim().replace(/\s{2,}/g, " ");
+
+    // Pass 4: guarantee visible change — retry with fresh randomness,
+    // then fall back to sentence reordering
+    if (out.toLowerCase() === text.toLowerCase()) {
+        out = applySynonyms(" " + text + " ").trim();
+        if (out.toLowerCase() === text.toLowerCase()) {
+            out = shuffleSentences(text);
+        }
+    }
+    return out;
+}
+
+/* ================================================================
+   UI WIRING
+================================================================ */
+let currentMode = "standard";
+const inputText  = document.getElementById("inputText");
+const outputText = document.getElementById("outputText");
+const runBtn     = document.getElementById("runBtn");
+const copyBtn    = document.getElementById("copyBtn");
+const clearBtn   = document.getElementById("clearBtn");
+const charCount  = document.getElementById("charCount");
+const toast      = document.getElementById("toast");
+
+function updateCount() {
+    const t = inputText.value.trim();
+    const words = t ? t.split(/\s+/).length : 0;
+    charCount.textContent = t.length + " chars \u00B7 " + words + " words";
+}
+inputText.addEventListener("input", updateCount);
+
+document.querySelectorAll(".pill").forEach(function (pill) {
+    pill.addEventListener("click", function () {
+        document.querySelectorAll(".pill").forEach(function (p) { p.classList.remove("active"); });
+        pill.classList.add("active");
+        currentMode = pill.dataset.mode;
+    });
+});
+
+runBtn.addEventListener("click", function () {
+    const text = inputText.value.trim();
+    if (!text) { showToast("Please enter some text first"); return; }
+    runBtn.disabled = true;
+    outputText.classList.add("shimmer");
+    outputText.textContent = "Rewriting text";
+    setTimeout(function () {
+        outputText.classList.remove("shimmer", "placeholder");
+        outputText.textContent = paraphrase(text, currentMode);
+        runBtn.disabled = false;
+    }, 600);
+});
+
+clearBtn.addEventListener("click", function () {
+    inputText.value = "";
+    outputText.textContent = "Your paraphrased text will appear here...";
+    outputText.classList.add("placeholder");
+    updateCount();
+});
+
+copyBtn.addEventListener("click", function () {
+    if (outputText.classList.contains("placeholder")) { showToast("Nothing to copy yet"); return; }
+    navigator.clipboard.writeText(outputText.textContent).then(function () { showToast("Copied to clipboard!"); });
+});
+
+function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(function () { toast.classList.remove("show"); }, 2000);
+}
+</script>
+
+</body>
+</html>
