@@ -9,6 +9,8 @@ A 100% client-side text paraphrasing tool. No AI, no API keys, no network reques
 - Capitalization-preserving word swaps
 - Sentence reordering fallback
 - Dark futuristic UI, mobile responsive
+- Use it for academic purposes no ai will be detected
+- Use it for professional purposes
 
 ## Usage
 Open `index.html` in any browser. No build step, no dependencies.
