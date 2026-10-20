@@ -15,3 +15,4 @@ Open `index.html` in any browser. No build step, no dependencies.
 
 ## License
 MIT — free to use, modify, and distribute.
+LIve demo: https://rephraseo.netlify.app/
